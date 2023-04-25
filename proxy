@@ -1,0 +1,41 @@
+#!/bin/bash
+
+cd $(dirname $(readlink -f $0))
+
+usage() {
+    echo "Usage: $0 [kube_options...] <pod> [local_port:]host:port" >&2
+    exit 1
+}
+
+HOSTPORT=${@:$#}
+OPTS=${*%${!#}}
+
+LOCALPORT=$(echo $HOSTPORT | awk -F: '{print $(NF-2)}' 2>/dev/null)
+HOST=$(echo $HOSTPORT | awk -F: '{print $(NF-1)}' 2>/dev/null)
+PORT=$(echo $HOSTPORT | awk -F: '{print $NF}' 2>/dev/null)
+
+LOCALPORT=${LOCALPORT:-8000}
+PODPORT=12335
+
+[ -n "$OPTS" ] || usage
+[ -n "$HOST" ] || usage
+[ -n "$PORT" ] || usage
+
+trap bye INT
+
+bye() {
+  kubectl exec $OPTS -- bash -c 'kill -TERM $(cat /tmp/tunnel_pid)' >/dev/null 2>&1
+  echo "Bye bye"
+  exit
+}
+
+(
+    echo "pod_port=$PODPORT"
+    echo "host='$HOST'"
+    echo "port=$PORT"
+    cat proxy.py
+) | kubectl exec -i $OPTS -- python3 &
+
+kubectl port-forward $OPTS $LOCALPORT:$PODPORT
+
+bye
