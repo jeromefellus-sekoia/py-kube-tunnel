@@ -22,7 +22,10 @@ try:
                 if not data:
                     break
                 else:
-                    print("<", data.decode(), flush=True)
+                    try:
+                        print("<", data.decode(), flush=True)
+                    except:
+                        print("< --binary data--")
                     conn.send(data)
             cur_client = None
 
@@ -39,7 +42,10 @@ try:
                     data = conn.recv(1024)
                     if not data:
                         break
-                    print(">", data.decode(), flush=True)
+                    try:
+                        print(">", data.decode(), flush=True)
+                    except:
+                        print("> --binary data--")
                     try:
                         cur_client.send(data)
                     except Exception:
